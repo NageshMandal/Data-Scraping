@@ -60,6 +60,4 @@ This project implements an end-to-end pipeline to scrape job postings from Wellf
 
 ---
 
----
-
 > Built for high-scale prospecting and lead generation workflows. ✨
