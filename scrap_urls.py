@@ -6,28 +6,48 @@ from seleniumbase import SB
 from lxml import html
 from pymongo import MongoClient, errors
 
-# ——— Load proxies from config/proxy.json ———
+# ——— Config paths ———
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), "config")
 PROXY_FILE = os.path.join(CONFIG_DIR, "proxy.json")
+URLS_FILE  = os.path.join(CONFIG_DIR, "urls.json")
 
+# ——— Load & normalize proxies ———
 try:
-    with open(PROXY_FILE, "r") as f:
-        proxy_urls = json.load(f)
+    raw_proxies = json.load(open(PROXY_FILE, "r"))
 except Exception as e:
     raise RuntimeError(f"Could not load proxy list from {PROXY_FILE}: {e}")
 
-# Wrap each URL in a dict with an error counter
-PROXIES = [{"url": url, "num": 0} for url in proxy_urls]
+proxy_urls = []
+for entry in raw_proxies:
+    if isinstance(entry, str):
+        proxy_urls.append(entry)
+    elif isinstance(entry, dict) and "url" in entry:
+        proxy_urls.append(entry["url"])
+    else:
+        raise RuntimeError(f"Invalid proxy entry in {PROXY_FILE}: {entry}")
 
+PROXIES = [{"url": url, "num": 0} for url in proxy_urls]
 def get_random_proxy():
     return random.choice(PROXIES)
 
+# ——— Load & save target‐URLs state ———
+def load_target_urls():
+    try:
+        return json.load(open(URLS_FILE, "r"))
+    except Exception as e:
+        raise RuntimeError(f"Could not load URLs from {URLS_FILE}: {e}")
+
+def save_target_urls(urls):
+    with open(URLS_FILE, "w") as f:
+        json.dump(urls, f, indent=2)
+
 # ——— MongoDB setup ———
-client = MongoClient("mongodb://localhost:27017/")
-db = client["job_scraper_db"]
+client     = MongoClient("mongodb://localhost:27017/")
+db         = client["job_scraping"]
 collection = db["job_urls"]
 collection.create_index("url", unique=True)
 
+# ——— Human‐like scrolling ———
 def simulate_human_behavior(sb):
     sb.sleep(random.uniform(3, 5))
     for _ in range(random.randint(3, 6)):
@@ -43,75 +63,94 @@ def simulate_human_behavior(sb):
         pass
     sb.sleep(random.uniform(3, 6))
 
-def scrape_all_job_urls():
-    base_url = "https://wellfound.com"
+# ——— Scrape all pages for one base_url ———
+def scrape_pages_for_url(base_url):
     page = 1
-
     while True:
-        page_url = (
-            f"{base_url}/location/united-states"
-            if page == 1
-            else f"{base_url}/location/united-states?page={page}"
-        )
+        page_url = base_url if page == 1 else f"{base_url}?page={page}"
         print(f"\nScraping page: {page_url}")
 
-        found_any = False
         for attempt in range(1, 4):
             proxy = get_random_proxy()
-            print(f" Attempt {attempt} using proxy {proxy['url']} (errors: {proxy['num']})")
-
+            print(f" Attempt {attempt} via proxy {proxy['url']} (errors={proxy['num']})")
             try:
                 with SB(test=True, uc=True, proxy=proxy["url"]) as sb:
                     sb.activate_cdp_mode(page_url)
                     simulate_human_behavior(sb)
-                    page_source = sb.get_page_source()
+                    html_src = sb.get_page_source()
 
-                if "Page not found (404)" in page_source:
-                    print("  ▶ 404 detected. Ending scrape.")
+                # 404 check
+                if "Page not found (404)" in html_src:
+                    print("  ▶ 404 detected on this URL; saving and skipping.")
+                    bad = page_url
+                    try:
+                        collection.update_one(
+                            {"url": bad},
+                            {"$setOnInsert": {"url": bad, "processed": False}},
+                            upsert=True
+                        )
+                    except errors.PyMongoError as e:
+                        print("   ⚠️ Mongo error on 404-save:", e)
                     return
 
-                tree = html.fromstring(page_source)
+                # zero-results check
+                if "0 results total" in html_src:
+                    print("  ▶ Zero results for this URL; skipping.")
+                    return
+
+                # normal scrape
+                tree  = html.fromstring(html_src)
                 hrefs = tree.xpath(
                     '//a[contains(@class, "mr-2") and contains(@class, "text-brand-burgandy")]/@href'
                 )
-                urls = [
-                    base_url + href if href.startswith("/") else href
+                urls  = [
+                    (base_url.split("/role")[0] + href) if href.startswith("/") else href
                     for href in hrefs
                 ]
 
                 if not urls:
-                    print("  ▶ No URLs found on this attempt.")
+                    print("  ▶ No job URLs found on this page.")
+                    # Let it retry up to 3 times, then skip page
                 else:
                     for full_url in urls:
-                        print("   →", full_url)
                         try:
                             collection.update_one(
                                 {"url": full_url},
                                 {"$setOnInsert": {"url": full_url, "processed": False}},
                                 upsert=True
                             )
+                            print("   →", full_url)
                         except errors.PyMongoError as e:
-                            print("   ⚠️ Mongo insert error:", e)
-                    found_any = True
+                            print("   ⚠️ Mongo error:", e)
+                    # successful scrape for this page, break retry loop
                     break
 
             except Exception as e:
-                # increment error count for this proxy
                 proxy["num"] += 1
-                print(f"  ⚠️ Error with proxy {proxy['url']}: {e}")
-                # wait a bit before retry
+                print(f"  ⚠️ Proxy error: {e}")
                 time.sleep(random.uniform(2, 4))
 
-        if not found_any:
-            print("  ▶ No URLs found after 3 attempts; moving on.")
+        else:
+            # ran out of attempts
+            print("  ▶ Skipping this page after 3 failed attempts.")
+
         page += 1
         time.sleep(random.uniform(2, 4))
 
+# ——— Main flow: loop through all URLs.json entries ———
 if __name__ == "__main__":
-    scrape_all_job_urls()
+    targets = load_target_urls()
+
+    for entry in targets:
+        if not entry.get("value", False):
+            print(f"\n=== Starting scrape for: {entry['url']} ===")
+            scrape_pages_for_url(entry["url"])
+            entry["value"] = True
+            save_target_urls(targets)
+            print(f"=== Finished; marked {entry['url']} as done ===")
+
     total = collection.count_documents({})
-    print(f"\nTotal URLs stored in MongoDB: {total}")
-    # Optionally: print proxy error counts
+    print(f"\n✅ All done! Total URLs in MongoDB: {total}")
     print("Proxy error counts:")
     for p in PROXIES:
         print(f" - {p['url']}: {p['num']}")
