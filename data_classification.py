@@ -12,7 +12,9 @@ SOURCE_COLLECTION = "jobs"
 DEST_COLLECTION = "classified_jobs"
 
 ES_HOST = "http://localhost:9200"
-ES_INDEX = "job_classifications"
+ES_INDEX = "project_jobposters_index"
+ES_USER = "project_jobposters_user"
+ES_PASS = "project_jobposters_1234"
 
 openai.api_key = "YOUR_OPENAI_API_KEY"
 
@@ -22,28 +24,32 @@ db = mongo_client[DB_NAME]
 source_col = db[SOURCE_COLLECTION]
 dest_col = db[DEST_COLLECTION]
 
-es = Elasticsearch(ES_HOST)
+es = Elasticsearch(
+    ES_HOST,
+    basic_auth=(ES_USER, ES_PASS)
+)
 
 # ——— LLM Prompt Function ———
 @retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(3))
 async def classify_job_post(job_data):
-    # Remove MongoDB _id field before sending to GPT
     job_data.pop('_id', None)
-
     job_json = json.dumps(job_data, indent=2)
-    
+
     prompt = f"""
 You are a job classification assistant. Given a detailed job post, classify the following:
 
-1. Categories (only based on real company focus).
-2. Focus areas for each category (Focus 1, Focus 2).
-3. Company domain if known.
-4. Job info (title, location, type, salary, etc.).
-5. A summary of hiring and product intent.
-6. Product investment signals.
-7. Output strictly in valid JSON.
+1. Categories (based on what the company is working on or investing in, not general terms like CRM unless explicitly mentioned).
+2. Focus areas for each category (2 specific focus points).
+3. Company domain and basic info.
+4. Job info (title, location, type, salary, posting age).
+5. A summary of intent.
+6. Any signals for product investment or hiring priority.
+7. Contact person info (if provided).
+8. Output in JSON.
 
-Here is the job post data:
+Only use categories that align with the company’s real focus based on the job post content.
+
+Here is the job post:
 {job_json}
     """
 
@@ -73,43 +79,45 @@ def save_to_mongo(document):
 def upsert_to_elasticsearch(data):
     company_info = data.get('company', {})
     company_name = company_info.get('name', '').lower().replace(" ", "_")
-    doc_id = company_name
+    doc_id = company_name or None
 
-    if not company_name:
+    if not doc_id:
         print("⚠️ No company name found, skipping Elasticsearch update.")
         return
 
-    if es.exists(index=ES_INDEX, id=doc_id):
-        existing_doc = es.get(index=ES_INDEX, id=doc_id)['_source']
-        jobs = existing_doc.get("jobs", [])
-        jobs.append(data['job'])
+    try:
+        if es.exists(index=ES_INDEX, id=doc_id):
+            existing_doc = es.get(index=ES_INDEX, id=doc_id)['_source']
+            jobs = existing_doc.get("jobs", [])
+            jobs.append(data['job'])
 
-        updated_doc = {
-            **existing_doc,
-            "jobs": jobs,
-            "latest_update": data
-        }
-        es.index(index=ES_INDEX, id=doc_id, body=updated_doc)
-    else:
-        new_doc = {
-            "company": data["company"],
-            "jobs": [data["job"]],
-            "categories": data["categories"],
-            "focus": data["focus"],
-            "intent_summary": data["intent_summary"],
-            "signals": data["relevant_for_prospecting"],
-            "latest_update": data
-        }
-        es.index(index=ES_INDEX, id=doc_id, body=new_doc)
+            updated_doc = {
+                **existing_doc,
+                "jobs": jobs,
+                "latest_update": data
+            }
+            es.index(index=ES_INDEX, id=doc_id, body=updated_doc)
+        else:
+            new_doc = {
+                "company": data["company"],
+                "jobs": [data["job"]],
+                "categories": data["categories"],
+                "focus": data["focus"],
+                "intent_summary": data["intent_summary"],
+                "signals": data["relevant_for_prospecting"],
+                "latest_update": data
+            }
+            es.index(index=ES_INDEX, id=doc_id, body=new_doc)
+    except Exception as e:
+        print(f"❌ Elasticsearch error: {e}")
 
 # ——— Batch Processing Function ———
 async def process_jobs(batch_size=5):
     cursor = source_col.find({})
-
     batch = []
-    for job in cursor:  # Note: not async for
-        batch.append(job)
 
+    for job in cursor:
+        batch.append(job)
         if len(batch) >= batch_size:
             await process_batch(batch)
             batch = []
