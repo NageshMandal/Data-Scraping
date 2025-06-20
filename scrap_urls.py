@@ -61,8 +61,8 @@ def zenrows_request(url, js_render=True, premium_proxy=True, block_resources="im
         return None
 
 # ——— Config paths ———
-CONFIG_DIR = os.path.join(os.path.dirname(__file__), "config")
-URLS_FILE = os.path.join(CONFIG_DIR, "urls.json")
+# Use the generated URLs file instead of the limited config file
+URLS_FILE = os.path.join(os.path.dirname(__file__), "wellfound_urls.json")
 
 # ——— Load & save target‐URLs state ———
 def load_target_urls():
