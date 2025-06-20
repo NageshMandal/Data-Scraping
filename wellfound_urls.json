@@ -1,0 +1,38 @@
+[
+  {
+    "url": "https://wellfound.com/role/l/software-engineer/united-states",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/software-engineer/silicon-valley",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/software-engineer/new-york-city",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/data-scientist/united-states",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/data-scientist/silicon-valley",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/data-scientist/new-york-city",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/product-manager/united-states",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/product-manager/silicon-valley",
+    "value": false
+  },
+  {
+    "url": "https://wellfound.com/role/l/product-manager/new-york-city",
+    "value": false
+  }
+]

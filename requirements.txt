@@ -1,0 +1,9 @@
+seleniumbase>=4.15.0
+pymongo>=4.3.0
+elasticsearch>=8.8.0
+groq>=0.4.1
+lxml>=4.9.0
+tenacity>=8.2.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+asyncio-throttle>=1.0.2 

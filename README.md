@@ -1,6 +1,6 @@
 # Job Scraping, Classification, and Indexing Pipeline
 
-This project implements an end-to-end pipeline to scrape job postings from Wellfound, classify them using OpenAI GPT-4, store structured data into MongoDB, and index it into Elasticsearch for advanced search and prospecting.
+This project implements an end-to-end pipeline to scrape job postings from Wellfound, classify them using Groq's qwen/qwen3-32b model, store structured data into MongoDB, and index it into Elasticsearch for advanced search and prospecting.
 
 ---
 
@@ -25,9 +25,9 @@ This project implements an end-to-end pipeline to scrape job postings from Wellf
 ### 4. Save Full Job Post Data to MongoDB
 - Store the entire structured job data (JSON format) including additional fields
 
-### 5. Classify Job Post Data Using OpenAI
+### 5. Classify Job Post Data Using Groq
 - Fetch raw job post data from `jobs` collection
-- Send complete job data (excluding MongoDB `_id`) to OpenAI GPT-4
+- Send complete job data (excluding MongoDB `_id`) to Groq's qwen/qwen3-32b model
 - Classify into structured JSON:
   - Categories
   - Focus Areas
@@ -54,7 +54,7 @@ This project implements an end-to-end pipeline to scrape job postings from Wellf
 
 - Python
 - MongoDB (job data storage)
-- OpenAI GPT-4 (classification)
+- Groq API with qwen/qwen3-32b model (classification)
 - Elasticsearch (searchable index)
 - Asyncio + Tenacity (retries and batch processing)
 

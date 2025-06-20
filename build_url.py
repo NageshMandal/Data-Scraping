@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+
 def load_json_from_js(file_path):
     """
     Load a .js/.json file that contains nothing but a JSON literal (array or object).
