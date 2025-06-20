@@ -43,7 +43,10 @@ logger = logging.getLogger(__name__)
 
 class JobScrapingPipeline:
     def __init__(self):
-        self.mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+        self.mongo_uri = os.getenv("MONGO_URI")
+        if not self.mongo_uri:
+            print("❌ ERROR: MONGO_URI not found in environment variables!")
+            exit(1)
         self.db_name = os.getenv("MONGO_DB_NAME", "job_scraping")
         self.client = None
         self.db = None

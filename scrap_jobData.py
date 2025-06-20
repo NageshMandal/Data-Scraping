@@ -257,7 +257,10 @@ if __name__ == "__main__":
     print("🚀 Starting ZenRows-powered job data scraping...")
     
     # — Connect to MongoDB —
-    MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+    MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    print("❌ ERROR: MONGO_URI not found in environment variables!")
+    exit(1)
     DB_NAME = os.getenv("MONGO_DB_NAME", "job_scraping")
     
     client = MongoClient(MONGO_URI)

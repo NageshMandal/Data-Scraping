@@ -19,9 +19,20 @@ load_dotenv()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Configuration
-ES_HOST = os.getenv("ES_HOST", "https://65.108.41.233:9200")
+ES_HOST = os.getenv("ES_HOST")
 ES_USER = os.getenv("ES_USER", "elastic")
-ES_PASS = os.getenv("ES_PASS", "gXpID1MQcRxP")
+ES_PASS = os.getenv("ES_PASS")
+
+# Security validation
+if not ES_HOST:
+    print("❌ ES_HOST not found in environment variables!")
+    print("💡 Please set ES_HOST in your .env file")
+    exit(1)
+
+if not ES_PASS:
+    print("❌ ES_PASS not found in environment variables!")
+    print("💡 Please set ES_PASS in your .env file")
+    exit(1)
 
 def test_with_requests():
     """Test with basic requests library (like curl)"""

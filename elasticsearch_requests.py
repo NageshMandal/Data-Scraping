@@ -23,10 +23,16 @@ class ElasticsearchRequests:
     """Simple Elasticsearch interface using requests library"""
     
     def __init__(self):
-        self.host = os.getenv("ES_HOST", "https://65.108.41.233:9200")
+        self.host = os.getenv("ES_HOST")  # Host from environment only
         self.user = os.getenv("ES_USER", "elastic")
-        self.password = os.getenv("ES_PASS", "gXpID1MQcRxP")
+        self.password = os.getenv("ES_PASS")  # Password from environment only
         self.index = os.getenv("ES_INDEX", "project_jobposters_index")
+        
+        # Security validation
+        if not self.host:
+            raise ValueError("❌ ES_HOST not found in environment variables! Please check your .env file.")
+        if not self.password:
+            raise ValueError("❌ ES_PASS not found in environment variables! Please check your .env file.")
         
         # Remove trailing slash if present
         if self.host.endswith('/'):

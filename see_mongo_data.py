@@ -6,10 +6,15 @@ from pymongo import MongoClient
 # Load environment variables from .env file (if you're using one)
 load_dotenv()
 
-# MongoDB connection settings
-MONGO_URI = "mongodb+srv://mqvist:hHvSyIdnhyPyodDQ@cluster0.xh2f6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-MONGO_DB_NAME = "job_scraping"
+# MongoDB connection settings - SECURE VERSION
+MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "job_scraping")
 
+# Verify environment variables are loaded
+if not MONGO_URI:
+    print("❌ ERROR: MONGO_URI not found in environment variables!")
+    print("💡 Please set MONGO_URI in your .env file")
+    exit(1)
 
 try:
     # Connect to MongoDB

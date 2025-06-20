@@ -102,14 +102,25 @@ def test_elasticsearch():
 
     try:
         # Get Elasticsearch configuration with new credentials
-        ES_HOST = os.getenv("ES_HOST", "https://65.108.41.233:9200")
+        ES_HOST = os.getenv("ES_HOST")
         ES_INDEX = os.getenv("ES_INDEX", "project_jobposters_index")
         ES_API_KEY = os.getenv("ES_API_KEY")  # API key takes priority
-        ES_USER = os.getenv("ES_USER", "elastic")  # New default username
-        ES_PASS = os.getenv("ES_PASS", "gXpID1MQcRxP")  # New default password
+        ES_USER = os.getenv("ES_USER", "elastic")  # Default username
+        ES_PASS = os.getenv("ES_PASS")  # Password from environment only
 
         print(f"Elasticsearch Host: {ES_HOST}")
         print(f"Index: {ES_INDEX}")
+        
+        # Security check for environment variables
+        if not ES_HOST:
+            print("⚠️ WARNING: ES_HOST not found in environment variables!")
+            print("💡 Please set ES_HOST in your .env file")
+            return False
+            
+        if not ES_PASS and not ES_API_KEY:
+            print("⚠️ WARNING: No Elasticsearch credentials found!")
+            print("💡 Please set either ES_API_KEY or ES_PASS in your .env file")
+            return False
         
         # Import SSL handling
         import urllib3

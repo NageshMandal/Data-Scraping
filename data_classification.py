@@ -19,11 +19,11 @@ DB_NAME = os.getenv("MONGO_DB_NAME", "job_scraping")
 SOURCE_COLLECTION = "jobs"
 DEST_COLLECTION = "classified_jobs"
 
-ES_HOST = os.getenv("ES_HOST", "https://65.108.41.233:9200")  # Updated default
+ES_HOST = os.getenv("ES_HOST")  # Host from environment only
 ES_INDEX = os.getenv("ES_INDEX", "project_jobposters_index")
 ES_API_KEY = os.getenv("ES_API_KEY")  # Use API key if available
-ES_USER = os.getenv("ES_USER", "elastic")  # Updated default
-ES_PASS = os.getenv("ES_PASS", "gXpID1MQcRxP")  # Updated default
+ES_USER = os.getenv("ES_USER", "elastic")  # Default username
+ES_PASS = os.getenv("ES_PASS")  # Password from environment only
 
 # Set Groq API key
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -37,20 +37,30 @@ dest_col = db[DEST_COLLECTION]
 # Elasticsearch with SSL verification disabled for self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Configure Elasticsearch client with basic auth as primary (curl testing confirmed it works)
-print("🔐 Using Elasticsearch Basic authentication")
-es = Elasticsearch(
-    ES_HOST,
-    basic_auth=(ES_USER, ES_PASS),
-    verify_certs=False,  # Disable SSL certificate verification  
-    ssl_show_warn=False,  # Disable SSL warnings
-    request_timeout=30,
-    retry_on_timeout=True,
-    max_retries=3,
-    ca_certs=False,  # Additional SSL fix
-    ssl_assert_hostname=False,  # Additional SSL fix
-    ssl_assert_fingerprint=False  # Additional SSL fix
-)
+# Security check for Elasticsearch credentials
+if not ES_HOST:
+    print("⚠️ WARNING: ES_HOST not found in environment variables!")
+    print("💡 Please set ES_HOST in your .env file")
+    es = None  # Will cause errors if used, forcing proper setup
+elif not ES_PASS and not ES_API_KEY:
+    print("⚠️ WARNING: No Elasticsearch credentials found!")
+    print("💡 Please set either ES_API_KEY or ES_PASS in your .env file")
+    es = None  # Will cause errors if used, forcing proper setup
+else:
+    # Configure Elasticsearch client with basic auth as primary (curl testing confirmed it works)
+    print("🔐 Using Elasticsearch Basic authentication")
+    es = Elasticsearch(
+        ES_HOST,
+        basic_auth=(ES_USER, ES_PASS),
+        verify_certs=False,  # Disable SSL certificate verification  
+        ssl_show_warn=False,  # Disable SSL warnings
+        request_timeout=30,
+        retry_on_timeout=True,
+        max_retries=3,
+        ca_certs=False,  # Additional SSL fix
+        ssl_assert_hostname=False,  # Additional SSL fix
+        ssl_assert_fingerprint=False  # Additional SSL fix
+    )
 
 # ——— LLM Prompt Function ———
 @retry(wait=wait_exponential(min=1, max=10), stop=stop_after_attempt(3))
