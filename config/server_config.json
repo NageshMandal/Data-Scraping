@@ -1,0 +1,96 @@
+{
+  "server_specs": {
+    "ram_gb": 92,
+    "cpu_cores": 16,
+    "cpu_threads": 32,
+    "architecture": "AMD Ryzen 9",
+    "storage": "NVMe SSD",
+    "environment": "Linux Server"
+  },
+  "performance_config": {
+    "url_scraping": {
+      "max_workers": 40,
+      "rate_limit_per_second": 25,
+      "batch_size": 200,
+      "max_retries": 3,
+      "timeout": 90,
+      "concurrent_requests": 50,
+      "memory_buffer_mb": 2048
+    },
+    "job_data_scraping": {
+      "max_workers": 35,
+      "rate_limit_per_second": 20,
+      "batch_size": 150,
+      "max_retries": 3,
+      "timeout": 120,
+      "memory_buffer_mb": 4096,
+      "connection_pool_size": 50
+    },
+    "ai_classification": {
+      "max_workers": 8,
+      "rate_limit_per_second": 4,
+      "batch_size": 25,
+      "max_retries": 3,
+      "timeout": 90,
+      "memory_buffer_mb": 8192,
+      "concurrent_api_calls": 8
+    },
+    "elasticsearch_indexing": {
+      "max_workers": 20,
+      "batch_size": 500,
+      "bulk_size": 1000,
+      "memory_buffer_mb": 4096,
+      "refresh_interval": "30s"
+    }
+  },
+  "resource_limits": {
+    "max_memory_usage_gb": 80,
+    "max_cpu_usage_percent": 85,
+    "max_open_files": 65536,
+    "max_connections": 1000
+  },
+  "optimization_features": {
+    "enable_numa_optimization": true,
+    "enable_cpu_affinity": true,
+    "enable_memory_mapping": true,
+    "enable_io_optimization": true,
+    "enable_connection_pooling": true,
+    "enable_caching": true
+  },
+  "monitoring": {
+    "progress_report_interval": 30,
+    "memory_check_interval": 60,
+    "cpu_check_interval": 30,
+    "auto_scale_workers": true,
+    "performance_logging": true
+  },
+  "api_limits": {
+    "zenrows": {
+      "startup_plan_requests": 100000,
+      "max_concurrent": 50,
+      "recommended_rate": 25
+    },
+    "groq": {
+      "free_tier_per_minute": 30,
+      "recommended_rate": 4,
+      "max_concurrent": 8
+    }
+  },
+  "database_config": {
+    "mongodb": {
+      "connection_pool_size": 100,
+      "max_pool_size": 200,
+      "socket_timeout_ms": 120000,
+      "connect_timeout_ms": 30000,
+      "server_selection_timeout_ms": 30000,
+      "write_concern": {"w": 1, "j": true},
+      "read_preference": "primary"
+    },
+    "elasticsearch": {
+      "connection_pool_size": 50,
+      "timeout": 60,
+      "max_retries": 3,
+      "retry_on_timeout": true
+    }
+  }
+} 
